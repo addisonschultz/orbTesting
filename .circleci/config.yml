@@ -9,22 +9,6 @@ orbs:
 workflows:
   version: 2.1
   build-project:
-    # jobs:
-    #   - framer/say-goodbye:
-    #       filters:
-    #         branches:
-    #           only: master
     jobs:
       - framer/say-goodbye:
-          docker:
-            - image: circleci/node:10
-          working_directory: ~/repo
-          steps:
-            - checkout
-            - run: echo starting parameter job
-            - say-goodbye:
-                who: "Addison"
-            - run: echo ending parameter job
-            - run: echo starting default job
-            - say-goodbye
-            - run: echo ending default job
+          who: "Addison"

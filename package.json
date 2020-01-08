@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "gh": "git add . && git commit -m 'new commit' && git push"
+    "gh": "git add . && git commit -m 'new commit' && git push",
+    "execute": "circleci config process .circleci/config.yml > process.yml && circleci local execute -c process.yml --job framer/say-goodbye"
   },
   "keywords": [],
   "author": "",

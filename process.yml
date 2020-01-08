@@ -1,0 +1,48 @@
+# Orb 'cli-orb/framer@1.4.0' resolved to 'cli-orb/framer@1.4.0'
+version: 2
+jobs:
+  framer/say-goodbye:
+    steps:
+    - run:
+        command: echo goodbye Addison
+    docker:
+    - image: circleci/node:10
+    working_directory: ~/repo
+workflows:
+  version: 2
+  build-project:
+    jobs:
+    - framer/say-goodbye
+
+# Original config.yml file:
+# # Javascript Node CircleCI 2.1 configuration file
+# #
+# #
+# #
+# version: 2.1
+# orbs:
+#   framer: cli-orb/framer@1.4.0
+# 
+# workflows:
+#   version: 2.1
+#   build-project:
+#     # jobs:
+#     #   - framer/say-goodbye:
+#     #       filters:
+#     #         branches:
+#     #           only: master
+#     jobs:
+#       - framer/say-goodbye:
+#           who: \"Addison\"
+#         # docker:
+#         #   - image: circleci/node:10
+#         # working_directory: ~/repo
+#         # steps:
+#         #   - checkout
+#         #   - run: echo starting parameter job
+#         #   - say-goodbye:
+#         #       who: \"Addison\"
+#         #   - run: echo ending parameter job
+#         #   - run: echo starting default job
+#         #   - say-goodbye
+#         #   - run: echo ending default job
