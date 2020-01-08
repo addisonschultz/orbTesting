@@ -10,7 +10,7 @@ workflows:
   version: 2.1
   build-project:
     jobs:
-      - framer/build:
+      - framer/say-hello:
           filters:
             branches:
               only: master
