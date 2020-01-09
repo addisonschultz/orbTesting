@@ -1,0 +1,21 @@
+{
+	"license": "MIT",
+	"main": "dist/index.js",
+	"devDependencies": {
+		"@types/react": "^16.8"
+	},
+	"peerDependencies": {
+		"framer": "^1.0",
+		"react": "^16.8"
+	},
+	"framer": {
+		"displayName": "Orb Testing"
+	},
+	"author": "Addison Schultz",
+	"dependencies": {
+		"carbon-components": "^10.9.0",
+		"carbon-components-react": "^7.9.0"
+	},
+	"name": "@framer/framer.orb-testing",
+	"version": "1.0.0"
+}

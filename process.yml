@@ -1,18 +1,63 @@
-# Orb 'cli-orb/framer@1.4.0' resolved to 'cli-orb/framer@1.4.0'
+# Orb 'cli-orb/framer@1.6.0' resolved to 'cli-orb/framer@1.6.0'
 version: 2
 jobs:
-  framer/say-goodbye:
-    steps:
-    - run:
-        command: echo goodbye Addison
+  framer/component-import:
     docker:
     - image: circleci/node:10
     working_directory: ~/repo
+    steps:
+    - add_ssh_keys:
+        fingerprints:
+        - ${CI_GIT_USER_KEY_FINGERPRINT}
+    - checkout
+    - run:
+        command: "# Download archive of hub release\ncurl -OL https://github.com/github/hub/releases/download/v2.13.0/hub-linux-amd64-2.13.0.tgz\n\n# Decompress archive            \ntar -zvxf hub-linux-amd64-2.13.0.tgz hub-linux-amd64-2.13.0/bin/hub\n\n# Move to location in user's PATH\nsudo mv hub-linux-amd64-2.13.0/bin/hub /usr/local/bin/hub\n\n# Clean up archive and artifacts\nrm -f hub-linux-amd64-2.13.0.tgz\nrm -rf hub-linux-amd64-2.13.0\n"
+    - run:
+        command: "COMPONENT_IMPORTER_BRANCH_NAME=\"framer-bridge/component-importer\"\nbranchAlreadyExists=false\n\n# cd to Framer project directory\ncd ./design-system.framerfx\n\n# Store current yarn.lock in memory\npreviousYarnLock=$(cat yarn.lock)\n\n# Install dependencies\nyarn\n\n# Store new yarn.lock in memory\nnewYarnLock=$(cat yarn.lock)\n\n# Check if the branch already exists\nif [ $(git branch -r | grep $COMPONENT_IMPORTER_BRANCH_NAME) ]; then\n  echo \"Component Importer Branch already exists, checking out\"\n  hub checkout $COMPONENT_IMPORTER_BRANCH_NAME\n  branchAlreadyExists=true\nelse\n  echo \"Component Importer Branch does not yet exist, creating new one\"\n  # Checkout a new branch\n  hub checkout -b $COMPONENT_IMPORTER_BRANCH_NAME\nfi\n\n# Check if a component importer configuration already exists\nif [ ! -f importer.config.json ]; then\n  # Run component importer for the first time\n  npx @framerjs/component-importer@next init carbon-components-react --mode plain\n\n  if [  ]; then\n    # Add color importer dependency\n    yarn global add https://github.com/tisho/framer-shared-colors-cli.git\n\n    # Run color importer for the first time\n    framer-shared-colors replace  ./design-system.framerfx/design/document.json\n  fi\nelse\n  # Determine if there is dependency updates\n  updatedDependencies=$(npx yarn-pkg-version-diff carbon-components-react,carbon-components,@carbon/icons-react $previousYarnLock $newYarnLock)\n\n  # Check if response of dependency updates script is empty\n  if [ -z \"$updatedDependencies\" ]; then\n    # Regenerate components\n    npx @framerjs/component-importer@next generate\n\n    if [  ]; then\n      # Add color importer dependency\n      yarn global add https://github.com/tisho/framer-shared-colors-cli.git\n    \n      # Rerun shared colors importer to merge new colors\n      framer-shared-colors merge  ./design-system.framerfx/design/document.json\n    fi \n  fi\nfi\n\n# Check if components were imported and there were changes\nif [ ! -z \"$(git status --porcelain)\" ]; then\n  echo \"Components imported, committing to git\"\n\n  # @TODO - optionally set user.email/user.name based on environment variables\n  hub config --global user.email \"component-importer@framer.com\"\n  hub config --global user.name \"Framer Bridge Component Importer\"\n\n  # Stage all files for commit\n  hub add .\n\n  # Commit imported components\n  # @TODO - Add more descriptive commit message\n  hub commit -m \"Re-imported components due to dependency update [skip ci]\"\n\n  # Push to git\n  hub push origin HEAD\n\n  # Create pull request if branch didn't already exist (PR will have been created if branch does exist)\n  if [ \"$branchAlreadyExists\" = false ]; then\n    # @TODO - Add more descriptive PR message\n    hub pull-request -m $COMPONENT_IMPORTER_BRANCH_NAME -p\n  fi\nfi\n"
+  framer/build:
+    docker:
+    - image: circleci/node:10
+    working_directory: ~/repo
+    steps:
+    - checkout
+    - run:
+        command: yarn
+    - run:
+        command: npx framer-cli build ./design-system.framerfx
+  framer/publish:
+    docker:
+    - image: circleci/node:10
+    working_directory: ~/repo
+    steps:
+    - checkout
+    - run:
+        command: yarn
+    - run:
+        command: npx framer-cli publish ./design-system.framerfx --yes
 workflows:
   version: 2
   build-project:
+    triggers:
+    - schedule:
+        cron: 0 10 * * *
+        filters:
+          branches:
+            only:
+            - master
     jobs:
-    - framer/say-goodbye
+    - framer/component-import
+  build-and-publish:
+    jobs:
+    - framer/build:
+        filters:
+          branches:
+            only: master
+    - framer/publish:
+        filters:
+          branches:
+            only: master
+        requires:
+        - framer/build
 
 # Original config.yml file:
 # # Javascript Node CircleCI 2.1 configuration file
@@ -21,28 +66,36 @@ workflows:
 # #
 # version: 2.1
 # orbs:
-#   framer: cli-orb/framer@1.4.0
+#   framer: cli-orb/framer@1.6.0
 # 
 # workflows:
 #   version: 2.1
 #   build-project:
-#     # jobs:
-#     #   - framer/say-goodbye:
-#     #       filters:
-#     #         branches:
-#     #           only: master
+#     triggers:
+#       - schedule:
+#           cron: \"0 10 * * *\"
+#           filters:
+#             branches:
+#               only:
+#                 - master
 #     jobs:
-#       - framer/say-goodbye:
-#           who: \"Addison\"
-#         # docker:
-#         #   - image: circleci/node:10
-#         # working_directory: ~/repo
-#         # steps:
-#         #   - checkout
-#         #   - run: echo starting parameter job
-#         #   - say-goodbye:
-#         #       who: \"Addison\"
-#         #   - run: echo ending parameter job
-#         #   - run: echo starting default job
-#         #   - say-goodbye
-#         #   - run: echo ending default job
+#       - framer/component-import:
+#           component-library-package: \"carbon-components-react\"
+#           dependant-libraries: \"carbon-components-react,carbon-components,@carbon/icons-react\"
+#           framer-project-path: \"./design-system.framerfx\"
+#           color-token-path: \"\"
+# 
+#   build-and-publish:
+#     jobs:
+#       - framer/build:
+#           framer-project-path: \"./design-system.framerfx\"
+#           filters:
+#             branches:
+#               only: master
+#       - framer/publish:
+#           framer-project-path: \"./design-system.framerfx\"
+#           requires:
+#             - framer/build
+#           filters:
+#             branches:
+#               only: master
